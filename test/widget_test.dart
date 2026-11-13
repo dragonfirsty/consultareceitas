@@ -1,10 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:consultareceitas/main.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   test('converte ingredientes e medidas da resposta da API', () {
     final meal = Meal.fromJson({
       'idMeal': '123',

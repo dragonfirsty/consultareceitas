@@ -19,6 +19,7 @@ Silvestre** para pesquisar receitas culinárias utilizando a API pública
 
 - Flutter e Dart
 - `http` para as requisições REST
+- `shared_preferences` para persistência local
 - API [TheMealDB](https://www.themealdb.com/api.php)
 
 ## Como executar
@@ -41,9 +42,9 @@ Depois, digite o nome de uma receita no campo de pesquisa e toque em
 Toque em uma receita encontrada para consultar seus ingredientes e o modo de
 preparo.
 
-Use o ícone de coração para marcar ou remover uma receita dos favoritos. Nesta
-versão, os favoritos ficam disponíveis apenas enquanto o aplicativo estiver
-aberto.
+Use o ícone de coração para marcar ou remover uma receita dos favoritos. Os
+favoritos são salvos localmente e restaurados quando o aplicativo é aberto
+novamente.
 
 ## Consulta utilizada
 

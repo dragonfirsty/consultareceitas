@@ -1,9 +1,13 @@
 // Integrantes: Leonardo Moya e Vinicius Silvestre
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+const _favoriteMealIdsKey = 'favorite_meal_ids';
 
 void main() {
   runApp(const RecipeApp());
@@ -86,12 +90,34 @@ class _RecipeSearchPageState extends State<RecipeSearchPage> {
   bool _hasSearched = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      setState(() {
+        _favoriteMealIds.addAll(
+          preferences.getStringList(_favoriteMealIdsKey) ?? [],
+        );
+      });
+    } on Exception {
+      if (!mounted) return;
+      _showStorageError();
+    }
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
   void _setFavorite(Meal meal, bool isFavorite) {
+    final wasFavorite = _favoriteMealIds.contains(meal.id);
     setState(() {
       if (isFavorite) {
         _favoriteMealIds.add(meal.id);
@@ -99,6 +125,35 @@ class _RecipeSearchPageState extends State<RecipeSearchPage> {
         _favoriteMealIds.remove(meal.id);
       }
     });
+    unawaited(_saveFavorites(meal.id, wasFavorite));
+  }
+
+  Future<void> _saveFavorites(String mealId, bool wasFavorite) async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setStringList(
+        _favoriteMealIdsKey,
+        _favoriteMealIds.toList(),
+      );
+    } on Exception {
+      if (!mounted) return;
+      setState(() {
+        if (wasFavorite) {
+          _favoriteMealIds.add(mealId);
+        } else {
+          _favoriteMealIds.remove(mealId);
+        }
+      });
+      _showStorageError();
+    }
+  }
+
+  void _showStorageError() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Não foi possível salvar os favoritos.'),
+      ),
+    );
   }
 
   Future<void> _searchMeals() async {
