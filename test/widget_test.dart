@@ -48,4 +48,27 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('alterna o favorito na tela de detalhes', (
+    WidgetTester tester,
+  ) async {
+    const meal = Meal(
+      id: '123',
+      name: 'Pasta',
+      imageUrl: '',
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: RecipeDetailPage(meal: meal),
+      ),
+    );
+
+    expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.favorite_border));
+    await tester.pump();
+
+    expect(find.byIcon(Icons.favorite), findsOneWidget);
+  });
 }

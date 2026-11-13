@@ -80,6 +80,7 @@ class RecipeSearchPage extends StatefulWidget {
 class _RecipeSearchPageState extends State<RecipeSearchPage> {
   final _searchController = TextEditingController();
   List<Meal> _meals = [];
+  final _favoriteMealIds = <String>{};
   bool _isLoading = false;
   String? _errorMessage;
   bool _hasSearched = false;
@@ -88,6 +89,16 @@ class _RecipeSearchPageState extends State<RecipeSearchPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _setFavorite(Meal meal, bool isFavorite) {
+    setState(() {
+      if (isFavorite) {
+        _favoriteMealIds.add(meal.id);
+      } else {
+        _favoriteMealIds.remove(meal.id);
+      }
+    });
   }
 
   Future<void> _searchMeals() async {
@@ -189,7 +200,13 @@ class _RecipeSearchPageState extends State<RecipeSearchPage> {
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => RecipeDetailPage(meal: meal),
+                  builder: (_) => RecipeDetailPage(
+                    meal: meal,
+                    isFavorite: _favoriteMealIds.contains(meal.id),
+                    onFavoriteChanged: (isFavorite) {
+                      _setFavorite(meal, isFavorite);
+                    },
+                  ),
                 ),
               );
             },
@@ -204,6 +221,12 @@ class _RecipeSearchPageState extends State<RecipeSearchPage> {
             title: Text(
               meal.name,
               style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            trailing: Icon(
+              _favoriteMealIds.contains(meal.id)
+                  ? Icons.favorite
+                  : Icons.favorite_border,
+              color: _favoriteMealIds.contains(meal.id) ? Colors.red : null,
             ),
           ),
         );
@@ -253,9 +276,16 @@ class _RecipeSearchPageState extends State<RecipeSearchPage> {
 }
 
 class RecipeDetailPage extends StatefulWidget {
-  const RecipeDetailPage({required this.meal, super.key});
+  const RecipeDetailPage({
+    required this.meal,
+    this.isFavorite = false,
+    this.onFavoriteChanged,
+    super.key,
+  });
 
   final Meal meal;
+  final bool isFavorite;
+  final ValueChanged<bool>? onFavoriteChanged;
 
   @override
   State<RecipeDetailPage> createState() => _RecipeDetailPageState();
@@ -264,11 +294,20 @@ class RecipeDetailPage extends StatefulWidget {
 class _RecipeDetailPageState extends State<RecipeDetailPage> {
   Meal? _details;
   String? _errorMessage;
+  late bool _isFavorite;
 
   @override
   void initState() {
     super.initState();
+    _isFavorite = widget.isFavorite;
     _loadDetails();
+  }
+
+  void _toggleFavorite() {
+    setState(() {
+      _isFavorite = !_isFavorite;
+    });
+    widget.onFavoriteChanged?.call(_isFavorite);
   }
 
   Future<void> _loadDetails() async {
@@ -308,7 +347,21 @@ class _RecipeDetailPageState extends State<RecipeDetailPage> {
   Widget build(BuildContext context) {
     final details = _details;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.meal.name)),
+      appBar: AppBar(
+        title: Text(widget.meal.name),
+        actions: [
+          IconButton(
+            onPressed: _toggleFavorite,
+            tooltip: _isFavorite
+                ? 'Remover dos favoritos'
+                : 'Adicionar aos favoritos',
+            icon: Icon(
+              _isFavorite ? Icons.favorite : Icons.favorite_border,
+              color: _isFavorite ? Colors.red : null,
+            ),
+          ),
+        ],
+      ),
       body: details == null && _errorMessage == null
           ? const Center(child: CircularProgressIndicator())
           : _errorMessage != null

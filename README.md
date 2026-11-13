@@ -10,6 +10,7 @@ Silvestre** para pesquisar receitas culinárias utilizando a API pública
 - Exibição do nome e da imagem de cada receita encontrada.
 - Acesso aos detalhes da receita ao tocar em um resultado.
 - Exibição de ingredientes, medidas, categoria, região e modo de preparo.
+- Marcação de receitas como favoritas durante o uso do aplicativo.
 - Indicador de carregamento durante a consulta.
 - Mensagens para pesquisa vazia, nenhum resultado e erro de conexão.
 - Interface responsiva para dispositivos móveis e web.
@@ -39,6 +40,10 @@ Depois, digite o nome de uma receita no campo de pesquisa e toque em
 
 Toque em uma receita encontrada para consultar seus ingredientes e o modo de
 preparo.
+
+Use o ícone de coração para marcar ou remover uma receita dos favoritos. Nesta
+versão, os favoritos ficam disponíveis apenas enquanto o aplicativo estiver
+aberto.
 
 ## Consulta utilizada
 
