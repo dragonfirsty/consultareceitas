@@ -1,121 +1,215 @@
-import 'package:material_ui/material_ui.dart';
+// Integrantes: Leonardo Moya e Vinicius Silvestre
+
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
-  runApp(const MyApp());
+  runApp(const RecipeApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class RecipeApp extends StatelessWidget {
+  const RecipeApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Consulta de Receitas',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const RecipeSearchPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class Meal {
+  const Meal({required this.name, required this.imageUrl});
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+  factory Meal.fromJson(Map<String, dynamic> json) {
+    return Meal(
+      name: json['strMeal'] as String? ?? 'Receita sem nome',
+      imageUrl: json['strMealThumb'] as String? ?? '',
+    );
+  }
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  final String name;
+  final String imageUrl;
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class RecipeSearchPage extends StatefulWidget {
+  const RecipeSearchPage({super.key});
 
-  void _incrementCounter() {
+  @override
+  State<RecipeSearchPage> createState() => _RecipeSearchPageState();
+}
+
+class _RecipeSearchPageState extends State<RecipeSearchPage> {
+  final _searchController = TextEditingController();
+  List<Meal> _meals = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+  bool _hasSearched = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _searchMeals() async {
+    final searchTerm = _searchController.text.trim();
+    if (searchTerm.isEmpty) {
+      setState(() {
+        _errorMessage = 'Digite o nome de uma receita para pesquisar.';
+        _meals = [];
+        _hasSearched = false;
+      });
+      return;
+    }
+
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _isLoading = true;
+      _errorMessage = null;
+      _hasSearched = true;
+      _meals = [];
     });
+
+    try {
+      final uri = Uri.https('www.themealdb.com', '/api/json/v1/1/search.php', {
+        's': searchTerm,
+      });
+      final response = await http.get(uri);
+
+      if (response.statusCode != 200) {
+        throw Exception('A API retornou o status ${response.statusCode}.');
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final mealsJson = data['meals'] as List<dynamic>?;
+      final meals =
+          mealsJson
+              ?.whereType<Map<String, dynamic>>()
+              .map(Meal.fromJson)
+              .toList() ??
+          [];
+
+      if (!mounted) return;
+      setState(() {
+        _meals = meals;
+        _isLoading = false;
+      });
+    } on Exception catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage =
+            'Não foi possível consultar as receitas. '
+            'Verifique sua conexão e tente novamente.\n$error';
+      });
+    }
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            _errorMessage!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16),
+          ),
+        ),
+      );
+    }
+    if (_hasSearched && _meals.isEmpty) {
+      return const Center(
+        child: Text(
+          'Nenhuma receita encontrada.',
+          style: TextStyle(fontSize: 16),
+        ),
+      );
+    }
+    if (!_hasSearched) {
+      return const Center(
+        child: Text(
+          'Digite uma receita e toque em Pesquisar.',
+          style: TextStyle(fontSize: 16),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: _meals.length,
+      itemBuilder: (context, index) {
+        final meal = _meals[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(8),
+            leading: Image.network(
+              meal.imageUrl,
+              width: 88,
+              height: 88,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.restaurant, size: 48),
+            ),
+            title: Text(
+              meal.name,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
+        title: const Text('Receitas - Leonardo Moya e Vinicius Silvestre'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => _searchMeals(),
+                    decoration: const InputDecoration(
+                      labelText: 'Nome da receita',
+                      hintText: 'Ex.: chicken, pasta, bolo',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: _isLoading ? null : _searchMeals,
+                  child: const Text('Pesquisar'),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
+          ),
+          Expanded(child: _buildContent()),
+        ],
       ),
     );
   }
