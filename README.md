@@ -1,33 +1,59 @@
 # Consulta de Receitas
 
-Aplicativo Flutter desenvolvido por **Leonardo Moya** e **Vinicius Silvestre**
-para consultar receitas culinárias na API pública
+Aplicativo desenvolvido em Flutter por **Leonardo Moya** e **Vinicius
+Silvestre** para pesquisar receitas culinárias utilizando a API pública
 [TheMealDB](https://www.themealdb.com/docs_api_guide.php).
+
+## Funcionalidades
+
+- Pesquisa de receitas pelo nome ou por parte dele.
+- Exibição do nome e da imagem de cada receita encontrada.
+- Indicador de carregamento durante a consulta.
+- Mensagens para pesquisa vazia, nenhum resultado e erro de conexão.
+- Interface responsiva para dispositivos móveis e web.
+
+## Tecnologias
+
+- Flutter e Dart
+- `http` para as requisições REST
+- API [TheMealDB](https://www.themealdb.com/api.php)
 
 ## Como executar
 
-1. Instale o Flutter e um dispositivo ou emulador.
-2. Na pasta do projeto, execute `flutter pub get`.
-3. Execute `flutter run`.
+Pré-requisitos:
 
-Digite o nome ou parte do nome de uma receita e toque em **Pesquisar**. O
-aplicativo apresenta o nome e a imagem das receitas encontradas e informa os
-estados de carregamento, ausência de resultados e erro de consulta.
+- Flutter instalado e configurado.
+- Um dispositivo, emulador ou navegador disponível para execução.
 
-## Sugestão de commits para a entrega
+Na pasta do projeto, execute:
 
-Faça os commits separadamente, durante o desenvolvimento:
+```bash
+flutter pub get
+flutter run
+```
 
-1. `chore: criar estrutura inicial do projeto Flutter`
-   - Registre o projeto Flutter inicial e os arquivos de configuração.
-2. `feat: criar tela de busca de receitas`
-   - Registre a AppBar com os nomes, o campo de pesquisa, o botão e o layout.
-3. `feat: integrar consulta com TheMealDB`
-   - Registre a chamada HTTP, a leitura do JSON e a lista com imagens.
-4. `test: adicionar estados e testes da tela`
-   - Registre as mensagens de carregamento, erro e nenhum resultado, além dos
-     testes de widget e desta documentação.
+Depois, digite o nome de uma receita no campo de pesquisa e toque em
+**Pesquisar**.
 
-Se o projeto já estiver pronto, os commits podem ser feitos em sequência
-separando os arquivos conforme os grupos acima; não é necessário alterar o
-histórico de commits já existentes.
+## Consulta utilizada
+
+As receitas são pesquisadas pelo endpoint:
+
+```text
+https://www.themealdb.com/api/json/v1/1/search.php?s=TERMO
+```
+
+O termo `TERMO` é substituído pelo texto digitado pelo usuário.
+
+## Testes
+
+Para executar os testes de widget:
+
+```bash
+flutter test
+```
+
+## Integrantes
+
+- Leonardo Moya
+- Vinicius Silvestre
