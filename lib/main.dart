@@ -27,17 +27,47 @@ class RecipeApp extends StatelessWidget {
 }
 
 class Meal {
-  const Meal({required this.name, required this.imageUrl});
+  const Meal({
+    required this.id,
+    required this.name,
+    required this.imageUrl,
+    this.category,
+    this.area,
+    this.instructions,
+    this.ingredients = const [],
+  });
 
   factory Meal.fromJson(Map<String, dynamic> json) {
+    final ingredients = <String>[];
+    for (var index = 1; index <= 20; index++) {
+      final ingredient = json['strIngredient$index'] as String?;
+      final measure = json['strMeasure$index'] as String?;
+      if (ingredient != null && ingredient.trim().isNotEmpty) {
+        final item = measure == null || measure.trim().isEmpty
+            ? ingredient.trim()
+            : '${measure.trim()} ${ingredient.trim()}';
+        ingredients.add(item);
+      }
+    }
+
     return Meal(
+      id: json['idMeal'] as String? ?? '',
       name: json['strMeal'] as String? ?? 'Receita sem nome',
       imageUrl: json['strMealThumb'] as String? ?? '',
+      category: json['strCategory'] as String?,
+      area: json['strArea'] as String?,
+      instructions: json['strInstructions'] as String?,
+      ingredients: ingredients,
     );
   }
 
+  final String id;
   final String name;
   final String imageUrl;
+  final String? category;
+  final String? area;
+  final String? instructions;
+  final List<String> ingredients;
 }
 
 class RecipeSearchPage extends StatefulWidget {
@@ -156,6 +186,13 @@ class _RecipeSearchPageState extends State<RecipeSearchPage> {
           clipBehavior: Clip.antiAlias,
           child: ListTile(
             contentPadding: const EdgeInsets.all(8),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => RecipeDetailPage(meal: meal),
+                ),
+              );
+            },
             leading: Image.network(
               meal.imageUrl,
               width: 88,
@@ -211,6 +248,137 @@ class _RecipeSearchPageState extends State<RecipeSearchPage> {
           Expanded(child: _buildContent()),
         ],
       ),
+    );
+  }
+}
+
+class RecipeDetailPage extends StatefulWidget {
+  const RecipeDetailPage({required this.meal, super.key});
+
+  final Meal meal;
+
+  @override
+  State<RecipeDetailPage> createState() => _RecipeDetailPageState();
+}
+
+class _RecipeDetailPageState extends State<RecipeDetailPage> {
+  Meal? _details;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDetails();
+  }
+
+  Future<void> _loadDetails() async {
+    try {
+      final uri = Uri.https(
+        'www.themealdb.com',
+        '/api/json/v1/1/lookup.php',
+        {'i': widget.meal.id},
+      );
+      final response = await http.get(uri);
+
+      if (response.statusCode != 200) {
+        throw Exception('A API retornou o status ${response.statusCode}.');
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final meals = data['meals'] as List<dynamic>?;
+      final mealJson = meals?.whereType<Map<String, dynamic>>().firstOrNull;
+      if (mealJson == null) {
+        throw Exception('A receita não foi encontrada.');
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _details = Meal.fromJson(mealJson);
+      });
+    } on Exception {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage =
+            'Não foi possível carregar os detalhes. Tente novamente.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final details = _details;
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.meal.name)),
+      body: details == null && _errorMessage == null
+          ? const Center(child: CircularProgressIndicator())
+          : _errorMessage != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ),
+            )
+          : _buildDetails(details!),
+    );
+  }
+
+  Widget _buildDetails(Meal meal) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (meal.imageUrl.isNotEmpty)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.network(
+              meal.imageUrl,
+              height: 220,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) =>
+                  const SizedBox.shrink(),
+            ),
+          ),
+        const SizedBox(height: 16),
+        Text(
+          meal.name,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        if (meal.category != null || meal.area != null) ...[
+          const SizedBox(height: 8),
+          Text(
+            [meal.category, meal.area].whereType<String>().join(' • '),
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ],
+        if (meal.ingredients.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Text(
+            'Ingredientes',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          ...meal.ingredients.map(
+            (ingredient) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.check),
+              title: Text(ingredient),
+            ),
+          ),
+        ],
+        if (meal.instructions != null &&
+            meal.instructions!.trim().isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Modo de preparo',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          Text(meal.instructions!),
+        ],
+      ],
     );
   }
 }
